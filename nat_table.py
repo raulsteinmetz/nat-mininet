@@ -1,47 +1,44 @@
-
-class NatEntry:
-    def __init__(self, src_ip, src_port, dest_ip, dest_port, protocol):
-        self.src_ip = src_ip
-        self.src_port = src_port
-        self.dest_ip = dest_ip
-        self.dest_port = dest_port
+class TableEntry:
+    def __init__(self, ip_src, port_src, ip_dst, port_dst, protocol):
+        self.ip_src = ip_src
+        self.port_src = port_src
+        self.ip_dst = ip_dst
+        self.port_dst = port_dst
         self.protocol = protocol
 
     def __eq__(self, other):
-        if not isinstance(other, NatEntry):
+        if not isinstance(other, TableEntry):
             return False
-        return (self.src_ip, self.src_port, self.dest_ip, self.dest_port, self.protocol) == \
-               (other.src_ip, other.src_port, other.dest_ip, other.dest_port, other.protocol)
-    
-    def match_src(self, ip, port, protocol):
-        return self.src_ip == ip and self.src_port == port and self.protocol == protocol
+        
+        return self.ip_src == other.ip_src and self.port_src == other.port_src \
+            and self.ip_dst == other.ip_dst and self.port_dst == other.port_dst \
+            and self.protocol == other.protocol 
 
-    def match_dest(self, ip, port, protocol):
-        return self.dest_ip == ip and self.dest_port == port and self.protocol == protocol
+    def show(self):
+        print(f'Src: {self.ip_src}, {self.port_src} -> {self.protocol} {self.ip_dst} {self.port_dst}')
 
 class NatTable:
+
     def __init__(self):
         self.table = []
 
-    def add_entry(self, entry : NatEntry):
-        if NatTable.has_entry(self, entry):
-            return 
-        self.table.append(entry)
+    def add_entry(self, new_entry):
+        if not self.has_entry(new_entry):
+            self.table.append(new_entry)
 
     def has_entry(self, new_entry):
-        for entry in self.table:
-            if entry == new_entry:
+        for e in self.table:
+            if e == new_entry:
                 return True
         return False
 
-    def response_translate(self, ip, port, protocol):
-        for entry in self.table:
-            if NatEntry.match_src(entry, ip, port, protocol):
-                return entry
+    def find_entry(self, server_port, host_port):
+        for e in self.table:
+            if e.port_src == host_port and e.port_dst == server_port:
+                return e
         return None
-
+    
     def list_entries(self):
-        print("\n## NAT table:")
-        for entry in self.table:
-            print(f"Source: {entry.src_ip}:{entry.src_port} -> Destination: {entry.dest_ip}:{entry.dest_port}, Protocol: {entry.protocol}")
-        print('\n')
+        print("\nNAT:\n")
+        for e in self.table:
+            e.show()
