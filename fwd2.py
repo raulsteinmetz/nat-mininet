@@ -17,6 +17,8 @@ class PktManager:
 				return pkt[TCP].sport
 			case 'UDP':
 				return pkt[UDP].sport
+			case 'ICMP':
+				return pkt[ICMP].id
 			case _:
 				print("Error: pkt has no valid level 4 protocol")
 				return None
@@ -27,6 +29,8 @@ class PktManager:
 				return pkt[TCP].dport
 			case 'UDP':
 				return pkt[UDP].dport
+			case 'ICMP':
+				return pkt[ICMP].id
 			case _:
 				print("Error: pkt has no valid level 4 protocol")
 				return None
@@ -37,6 +41,8 @@ class PktManager:
 			return 'TCP'
 		elif pkt.haslayer(UDP):
 			return 'UDP'
+		elif pkt.haslayer(ICMP):
+			return 'ICMP'
 		else:
 			print("Error: pkt has no valid level 4 protocol")
 			return None
@@ -47,6 +53,9 @@ def nat_gen_entry(pkt):
 	ip_dest = pkt[IP].dst
 	port_dst = PktManager.get_port_dst(pkt)
 	protocol = PktManager.get_protocol4(pkt)
+
+	if port_src == None or port_dst == None:
+		exit()
 
 	return TableEntry(ip_src, port_src, ip_dest, port_dst, protocol)
 
@@ -68,6 +77,10 @@ def we_send_it(pkt):
 def checksum_recalc(pkt):
 	del pkt[IP].chksum
 	del pkt[IP].payload.chksum
+
+	if(PktManager.get_protocol4(pkt) == 'ICMP'):
+		del pkt[ICMP].chksum
+
 	return pkt.__class__(bytes(pkt))
 
 def update_ips(pkt, src=None, dst=None):
@@ -106,7 +119,6 @@ def example(pkt):
 		pkt.show()
 
 		sendp(pkt, iface = public_interface)
-
 
 	elif pkt.sniffed_on == public_interface:
 		print("Pacote recebido do lado público: ")
