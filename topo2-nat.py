@@ -32,8 +32,9 @@ def run():
     net.get('server2').cmd('iperf -s -u -p 8844 &')
         
     for _, v in net.nameToNode.items():
-     for itf in v.intfList():
-      v.cmd('ethtool -K '+itf.name+' tx off rx off') 
+        for itf in v.intfList():
+            v.cmd('ethtool -K '+itf.name+' tx off rx off')
+
     net.start()
     CLI(net)
     net.stop()
