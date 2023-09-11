@@ -1,9 +1,9 @@
 from scapy.all import *
 from scapy.layers.inet import TCP, UDP, ICMP
 
-class L2Manager:
+class L4Manager:
 	def get_port_src(pkt):
-		match L2Manager.get_protocol4(pkt):
+		match L4Manager.get_protocol4(pkt):
 			case 'TCP':
 				return pkt[TCP].sport
 			case 'UDP':
@@ -15,7 +15,7 @@ class L2Manager:
 				return None
 			
 	def get_port_dst(pkt):
-		match L2Manager.get_protocol4(pkt):
+		match L4Manager.get_protocol4(pkt):
 			case 'TCP':
 				return pkt[TCP].dport
 			case 'UDP':
