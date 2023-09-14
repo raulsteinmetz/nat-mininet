@@ -68,6 +68,7 @@ def main():
 		return pkt
 
 	def handle_ip_change(pkt, src=None, dst=None):
+		pkt = pkt.copy()
 		pkt = update_ttl(handle_layer2(handle_layer3(pkt, src, dst)))
 		if(L4Manager.get_protocol4(pkt) == 'ICMP'):
 			del pkt[ICMP].chksum
