@@ -6,13 +6,13 @@ from scapy.layers.l2 import Ether
 from nat_table import *
 from protocol_manager import L4Manager
 
-internal_interface = 'r-eth0'
-public_interface = 'r-eth1'
-
-nat_table = NatTable()
 
 		
 def main():
+	internal_interface = 'r-eth0'
+	public_interface = 'r-eth1'
+
+	nat_table = NatTable()
 
 	def nat_gen_entry(pkt):
 		ip_src = pkt[IP].src
@@ -35,17 +35,14 @@ def main():
 		return get_if_addr(interface)
 
 	def sent(pkt):
-		return pkt[Ether].src == mac(pkt.sniffed_on)
+		if pkt[Ether].src == mac(pkt.sniffed_on):
+			return True
+		return False
 
 	def checksum_recalc(pkt):
 		return pkt.__class__(bytes(pkt))
 
-	def update_ttl(pkt):
-		pkt = pkt.copy()
-		pkt[IP].ttl = pkt[IP].ttl - 1
-		return pkt
-	
-	def handle_layer3(pkt, src=None, dst=None):
+	def update_ips(pkt, src=None, dst=None):
 		pkt = pkt.copy()
 
 		if src is None:
@@ -56,45 +53,37 @@ def main():
 		pkt[IP].src = src
 		pkt[IP].dst = dst
 
+		pkt[IP].ttl = pkt[IP].ttl - 1
+
 		del pkt[IP].chksum
 		del pkt[IP].payload.chksum
 
-		return pkt
-	
-	def handle_layer2(pkt):
-		pkt = pkt.copy()
-		del pkt[Ether].dst
-		del pkt[Ether].src
-		return pkt
-
-	def handle_ip_change(pkt, src=None, dst=None):
-		pkt = pkt.copy()
-		pkt = update_ttl(handle_layer2(handle_layer3(pkt, src, dst)))
-		if(L4Manager.get_protocol4(pkt) == 'ICMP'):
-			del pkt[ICMP].chksum
-		
+		pkt[Ether].dst = None
+		pkt[Ether].src = None
 		return checksum_recalc(pkt)
 
 	def handle_private(pkt):
-		if pkt.sniffed_on != internal_interface: return
-
-		nat_table.add_entry(nat_gen_entry(pkt))
-		pkt = handle_ip_change(pkt, src = ip(public_interface))
-
-		sendp(pkt, iface = public_interface)
+		if pkt.sniffed_on != internal_interface: return None
+		entry = nat_gen_entry(pkt)
+		nat_table.add_entry(entry)
+		print(entry.protocol)
+		new = update_ips(pkt, src = ip(public_interface))
+		print(new[IP].src)
+		sendp(new.copy(), iface = public_interface)
+		return new
 
 	def handle_public(pkt):
-		if pkt.sniffed_on != public_interface: return
-
+		if pkt.sniffed_on != public_interface: return None
 		entry = nat_find_entry(pkt)
-		pkt = handle_ip_change(pkt, dst = entry.ip_src)
-
-		sendp(pkt, iface = internal_interface)
+		if entry:
+			new = update_ips(pkt, dst = entry.ip_src)
+			sendp(new, iface = internal_interface)
+			return new
+		return None
 
 	def router(pkt):
 		if sent(pkt):
 			return
-		
 		handle_private(pkt)
 		handle_public(pkt)
 		
