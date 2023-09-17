@@ -1,4 +1,0 @@
-host1: iperf -c 8.8.8.8 -p 8888 
-host1: iperf -c 8.8.4.4 -p 8844 -u
-host2: iperf -c 8.8.8.8 -p 8888
-host2: iperf -c 8.8.4.4 -p 8844 -u
