@@ -23,6 +23,9 @@ def main():
 
 		return TableEntry(ip_src, port_src, ip_dest, port_dst, protocol)
 
+	def supported(pkt: Packet):
+		return L4Manager.get_protocol4(pkt) != None
+
 	def nat_find_entry(pkt):
 		port_scr = L4Manager.get_port_src(pkt)
 		port_dst = L4Manager.get_port_dst(pkt)
@@ -40,6 +43,8 @@ def main():
 		return False
 
 	def checksum_recalc(pkt):
+		del pkt[IP].chksum
+		del pkt[IP].payload.chksum
 		return pkt.__class__(bytes(pkt))
 
 	def update_ips(pkt, src=None, dst=None):
@@ -55,25 +60,20 @@ def main():
 
 		pkt[IP].ttl = pkt[IP].ttl - 1
 
-		del pkt[IP].chksum
-		del pkt[IP].payload.chksum
-
-		pkt[Ether].dst = None
 		pkt[Ether].src = None
+		pkt[Ether].dst = None
 		return checksum_recalc(pkt)
 
 	def handle_private(pkt):
-		if pkt.sniffed_on != internal_interface: return None
 		entry = nat_gen_entry(pkt)
 		nat_table.add_entry(entry)
 		print(entry.protocol)
 		new = update_ips(pkt, src = ip(public_interface))
 		print(new[IP].src)
-		sendp(new.copy(), iface = public_interface)
+		sendp(new, iface = public_interface)
 		return new
 
 	def handle_public(pkt):
-		if pkt.sniffed_on != public_interface: return None
 		entry = nat_find_entry(pkt)
 		if entry:
 			new = update_ips(pkt, dst = entry.ip_src)
@@ -82,12 +82,20 @@ def main():
 		return None
 
 	def router(pkt):
+		if not supported(pkt):
+			return
+
 		if sent(pkt):
 			return
-		handle_private(pkt)
-		handle_public(pkt)
-		
-	sniff(iface=[internal_interface, public_interface], filter='ip',  prn=router)
+
+		if pkt.sniffed_on == internal_interface:
+			pkt = handle_private(pkt)
+		elif pkt.sniffed_on == public_interface:
+			pkt = handle_public(pkt)
+
+		#pkt.show()
+
+	sniff(iface=[internal_interface, public_interface], filter='ip', prn=router)
 
 if __name__ == '__main__':
-    main()
+	main()

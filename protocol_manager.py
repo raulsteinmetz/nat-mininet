@@ -35,5 +35,4 @@ class L4Manager:
 		elif pkt.haslayer(ICMP):
 			return 'ICMP'
 		else:
-			print("Error: pkt has no valid level 4 protocol")
 			return None

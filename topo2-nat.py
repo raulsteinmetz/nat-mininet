@@ -30,6 +30,10 @@ def run():
     net = Mininet(topo=BasicTopo(), controller=None)
     net.get('server1').cmd('iperf -s -p 8888 &')
     net.get('server2').cmd('iperf -s -u -p 8844 &')
+    
+    #comandos misteoriosos 
+    net.get('r').cmd('sudo sysctl net.ipv4.ip_forward=0')
+    net.get('r').cmd('iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP')
         
     for _, v in net.nameToNode.items():
         for itf in v.intfList():
